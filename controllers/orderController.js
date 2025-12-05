@@ -82,6 +82,78 @@ const createOrder = async (req, res, next) => {
 };
 
 /**
+ * @desc    Create new guest order
+ * @route   POST /api/orders/guest
+ * @access  Public
+ */
+const createGuestOrder = async (req, res, next) => {
+  try {
+    const { items, shippingAddress, deliveryCharge, paymentMethod } = req.body;
+
+    if (!items || items.length === 0) {
+      res.status(400);
+      throw new Error('No order items provided');
+    }
+
+    // Calculate total and prepare order items
+    let totalAmount = 0;
+    const orderItems = [];
+
+    for (const item of items) {
+      const product = await Product.findById(item.product);
+      
+      if (!product) {
+        res.status(404);
+        throw new Error(`Product not found: ${item.product}`);
+      }
+
+      // Check stock
+      if (product.stock < item.quantity) {
+        res.status(400);
+        throw new Error(`Insufficient stock for ${product.name}`);
+      }
+
+      const itemTotal = product.basePrice * item.quantity;
+      totalAmount += itemTotal;
+
+      orderItems.push({
+        product: product._id,
+        name: product.name,
+        quantity: item.quantity,
+        price: product.basePrice,
+        size: item.size,
+        color: item.color,
+        material: item.material,
+        customDesign: item.customDesign,
+      });
+
+      // Update product stock
+      product.stock -= item.quantity;
+      await product.save();
+    }
+
+    // Add delivery charge to total
+    const finalTotal = totalAmount + (deliveryCharge || 60);
+
+    // Create order without user
+    const order = await Order.create({
+      items: orderItems,
+      totalAmount: finalTotal,
+      deliveryCharge: deliveryCharge || 60,
+      paymentMethod: paymentMethod || 'Cash on Delivery',
+      shippingAddress,
+    });
+
+    res.status(201).json({
+      success: true,
+      data: order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * @desc    Get user's orders
  * @route   GET /api/orders
  * @access  Private
@@ -196,6 +268,7 @@ const updateOrderStatus = async (req, res, next) => {
 
 module.exports = {
   createOrder,
+  createGuestOrder,
   getUserOrders,
   getOrderById,
   getAllOrders,

@@ -10,6 +10,7 @@ const productRoutes = require('./routes/productRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const landingPageRoutes = require('./routes/landingPageRoutes');
 
 // Initialize Express app
 const app = express();
@@ -28,6 +29,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/upload', uploadRoutes); // Cloudinary upload routes
+app.use('/api/landing-pages', landingPageRoutes); // Ad landing pages
 
 // Health check route
 app.get('/api/health', (req, res) => {

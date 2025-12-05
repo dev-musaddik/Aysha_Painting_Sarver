@@ -139,9 +139,89 @@ const updateProfile = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Get user statistics (admin only)
+ * @route   GET /api/auth/admin/stats
+ * @access  Private/Admin
+ */
+const getUserStats = async (req, res, next) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const totalAdmins = await User.countDocuments({ role: 'admin' });
+    const totalRegularUsers = await User.countDocuments({ role: 'user' });
+
+    res.json({
+      totalUsers,
+      totalAdmins,
+      totalRegularUsers,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Get all users (admin only)
+ * @route   GET /api/auth/admin/users
+ * @access  Private/Admin
+ */
+const getAllUsers = async (req, res, next) => {
+  try {
+    const users = await User.find({}).select('-password').sort({ createdAt: -1 });
+    
+    res.json({
+      success: true,
+      count: users.length,
+      users,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Update user role (admin only)
+ * @route   PUT /api/auth/admin/users/:id/role
+ * @access  Private/Admin
+ */
+const updateUserRole = async (req, res, next) => {
+  try {
+    const { role } = req.body;
+    
+    if (!['user', 'admin'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role' });
+    }
+    
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    user.role = role;
+    await user.save();
+    
+    res.json({
+      success: true,
+      message: `User role updated to ${role}`,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   signup,
   login,
   getProfile,
   updateProfile,
+  getUserStats,
+  getAllUsers,
+  updateUserRole,
 };
